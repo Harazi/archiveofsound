@@ -48,6 +48,7 @@ type post struct {
 	Tn_w         int
 	Tn_h         int
 	Filedeleted  int
+	Since4pass   int
 	Closed       int
 	Archived     int
 }
@@ -107,7 +108,7 @@ func main() {
 
 	/*
 	 * Not included:
-	 ** sticky, closed, now, replies, images, bumplimit, imagelimit, semantic_url, since4pass, unique_ips, archived, archived_on
+	 ** sticky, closed, now, replies, images, bumplimit, imagelimit, semantic_url, unique_ips, archived, archived_on
 	 * Attachment related columns are set at "media" table
 	 * board and attachment are extra columns not in the api
 	 */
@@ -126,6 +127,7 @@ func main() {
 			flag_name TEXT,
 			sub TEXT,
 			com TEXT,
+			since4pass INTEGER, 
 			board TEXT NOT NULL,
 			attachment BOOLEAN
 		);
@@ -193,7 +195,7 @@ func main() {
 			}
 
 			_, err = db.Exec(
-				"INSERT INTO post VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+				"INSERT INTO post VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
 				post.No,
 				post.Resto,
 				post.Time,
@@ -207,6 +209,7 @@ func main() {
 				post.Flag_name,
 				post.Sub,
 				post.Com,
+				post.Since4pass,
 				board,
 				post.Fsize > 0 || post.Filedeleted == 1,
 			)
