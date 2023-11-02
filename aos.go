@@ -53,6 +53,7 @@ type post struct {
 }
 
 var debug = log.New(os.Stderr, "", log.Ldate|log.Ltime|log.Lshortfile)
+var client = http.Client{}
 
 func main() {
 	xdg, envOk := os.LookupEnv("XDG_DATA_HOME")
@@ -159,7 +160,6 @@ func main() {
 		debug.Fatal(err)
 	}
 
-	client := http.Client{}
 	threadActive := true
 
 	for threadActive {
@@ -278,6 +278,7 @@ func main() {
 
 			_, err = os.Stat(filePath)
 			if err != nil {
+				downloadThumbnail(fileDir+"/"+fileHashStr+"s.jpg", board, strconv.Itoa(post.Tim)+"s.jpg")
 				err := os.WriteFile(filePath, attachment, 0644)
 				if err != nil {
 					debug.Fatal(err)
@@ -311,5 +312,29 @@ func main() {
 		if threadActive {
 			time.Sleep(time.Second * time.Duration(300))
 		}
+	}
+}
+
+func downloadThumbnail(path, board, id string) {
+	// Adhering to the API rules
+	time.Sleep(time.Second * time.Duration(1))
+
+	resp, err := client.Get("https://i.4cdn.org/" + board + "/" + id)
+	if err != nil {
+		log.Printf("Couldn't get file %s: %v\n", id, err)
+		return
+	}
+	if resp.StatusCode != 200 {
+		log.Printf("Couldn't get file %s: Server replied with status code %d", id, resp.StatusCode)
+		return
+	}
+	attachment, err := io.ReadAll(resp.Body)
+	if err != nil {
+		log.Printf("Couldn't get file %s: %v\n", id, err)
+		return
+	}
+	err = os.WriteFile(path, attachment, 0644)
+	if err != nil {
+		debug.Fatal(err)
 	}
 }
