@@ -136,13 +136,13 @@ func main() {
 	 * no and board are set to identify linked post
 	 * sha is the sha1 hash of the first video stream of the attachment, i.e. it won't change its output based on metadata, container or audio streams
 	 * Not included:
-	 ** filedeleted, spoiler, custom_spoiler tag, m_img
+	 ** spoiler, custom_spoiler tag, m_img
 	 */
 	_, err = db.Exec(`
 		CREATE TABLE IF NOT EXISTS media (
 			no INTEGER NOT NULL,
 			board TEXT NOT NULL,
-			tim INTEGER NOT NULL,
+			tim INTEGER,
 			filename TEXT,
 			ext TEXT,
 			fsize INTEGER,
@@ -151,6 +151,7 @@ func main() {
 			h INTEGER,
 			tn_w INTEGER,
 			tn_h INTEGER,
+			filedeleted BOOLEAN,
 			sha TEXT
 		)
 	`)
@@ -207,13 +208,26 @@ func main() {
 				post.Sub,
 				post.Com,
 				board,
-				post.Fsize > 0,
+				post.Fsize > 0 || post.Filedeleted == 1,
 			)
 			if err != nil {
 				debug.Fatal(err)
 			}
 
-			if post.Fsize == 0 {
+			if post.Fsize == 0 && post.Filedeleted != 1 {
+				continue
+			}
+			if post.Filedeleted == 1 {
+				log.Printf("File from post no. %d is deleted\n", post.No)
+				_, err := db.Exec(
+					"INSERT INTO media (no, board, filedeleted) VALUES(?,?,?)",
+					post.No,
+					board,
+					true,
+				)
+				if err != nil {
+					debug.Fatal(err)
+				}
 				continue
 			}
 			if post.Ext == ".gif" {
@@ -271,7 +285,7 @@ func main() {
 			}
 
 			_, err = db.Exec(
-				"INSERT INTO media VALUES(?,?,?,?,?,?,?,?,?,?,?,?)",
+				"INSERT INTO media VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)",
 				post.No,
 				board,
 				post.Tim,
@@ -283,6 +297,7 @@ func main() {
 				post.H,
 				post.Tn_w,
 				post.Tn_h,
+				post.Filedeleted,
 				videoHashStr,
 			)
 			if err != nil {
