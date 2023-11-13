@@ -1,0 +1,6 @@
+[Unit]
+Description=Archive of Sound
+
+[Service]
+Type=exec
+ExecStart=aos %i
