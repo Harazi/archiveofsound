@@ -271,7 +271,7 @@ func main() {
 
 			videoHashStr := hex.EncodeToString(videoHash)
 			fileHashStr := hex.EncodeToString(fileHash)
-			fileDir := *dataDir + "/media/" + fileHashStr[:4]
+			fileDir := *dataDir + "/media/" + fileHashStr[:2] + "/" + fileHashStr[2:4] + "/" + fileHashStr[4:6]
 			filePath := fileDir + "/" + fileHashStr + post.Ext
 
 			err = os.MkdirAll(fileDir, 0755)
