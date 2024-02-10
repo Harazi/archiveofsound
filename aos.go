@@ -14,8 +14,10 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"os/signal"
 	"strconv"
 	"strings"
+	"syscall"
 	"time"
 
 	_ "modernc.org/sqlite"
@@ -105,6 +107,7 @@ func main() {
 	if err != nil {
 		debug.Fatal(err)
 	}
+	defer db.Close()
 
 	/*
 	 * Not included:
@@ -163,6 +166,21 @@ func main() {
 	}
 
 	threadActive := true
+	sleeping := false
+	greenLight := true
+
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
+	go func() {
+		for s := range sigChan {
+			log.Printf("Recieved signal %s, Shutting down\n", s.String())
+			threadActive = false
+			greenLight = false
+			if sleeping {
+				os.Exit(0)
+			}
+		}
+	}()
 
 	for threadActive {
 		resp, err := client.Get("https://a.4cdn.org/" + board + "/thread/" + threadNo + ".json")
@@ -187,6 +205,10 @@ func main() {
 		threadActive = res.Posts[0].Archived == 0 && res.Posts[0].Closed == 0
 
 		for _, post := range res.Posts {
+			if !greenLight {
+				break
+			}
+
 			row := db.QueryRow("SELECT no FROM post WHERE no == ?", post.No)
 			err := row.Scan(nil)
 			if err != sql.ErrNoRows {
@@ -309,7 +331,9 @@ func main() {
 		}
 
 		if threadActive {
+			sleeping = true
 			time.Sleep(time.Second * time.Duration(300))
+			sleeping = false
 		}
 	}
 }
