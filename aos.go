@@ -233,10 +233,6 @@ func main() {
 				}
 				continue
 			}
-			if post.Ext == ".gif" {
-				// Can't archive gif files, ffmpeg can't recognize it from stdin
-				continue
-			}
 
 			log.Printf("Downloading %d%s\n", post.Tim, post.Ext)
 			resp, err := client.Get("https://i.4cdn.org/" + board + "/" + strconv.Itoa(post.Tim) + post.Ext)
