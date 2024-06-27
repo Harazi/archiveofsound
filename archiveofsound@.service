@@ -3,4 +3,4 @@ Description=Archive of Sound
 
 [Service]
 Type=exec
-ExecStart=aos %i
+ExecStart=archiveofsound %i
