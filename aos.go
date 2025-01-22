@@ -272,25 +272,36 @@ func main() {
 				continue
 			}
 
+			attachmentHasSha1 := true
 			hash := sha1.New()
 			cmd := exec.Command("ffmpeg", "-i", "-", "-map", "0:v:0", "-f", "rawvideo", "-")
 			cmd.Stdin = bytes.NewReader(attachment)
 			cmd.Stdout = hash
 			err = cmd.Run()
 			if err != nil {
-				debug.Fatal(err)
+				exitError, ok := err.(*exec.ExitError)
+				if ok {
+					debug.Println("FFmpeg Error")
+					debug.Println(exitError.Stderr)
+					attachmentHasSha1 = false
+				} else {
+					debug.Fatal(err)
+				}
 			}
-			videoHash := hash.Sum(nil)
 
-			fileHash, err := base64.StdEncoding.DecodeString(post.Md5)
+			var attachmentSha1Hash []byte
+			if attachmentHasSha1 {
+				attachmentSha1Hash = hash.Sum(nil)
+			}
+
+			tmp, err := base64.StdEncoding.DecodeString(post.Md5)
 			if err != nil {
 				debug.Fatal(err)
 			}
+			attachmentMd5Hash := hex.EncodeToString(tmp)
 
-			videoHashStr := hex.EncodeToString(videoHash)
-			fileHashStr := hex.EncodeToString(fileHash)
-			fileDir := *dataDir + "/media/" + fileHashStr[:2] + "/" + fileHashStr[2:4] + "/" + fileHashStr[4:6]
-			filePath := fileDir + "/" + fileHashStr + post.Ext
+			fileDir := *dataDir + "/media/" + attachmentMd5Hash[:2] + "/" + attachmentMd5Hash[2:4] + "/" + attachmentMd5Hash[4:6]
+			filePath := fileDir + "/" + attachmentMd5Hash + post.Ext
 
 			err = os.MkdirAll(fileDir, 0755)
 			if err != nil {
@@ -299,7 +310,7 @@ func main() {
 
 			_, err = os.Stat(filePath)
 			if err != nil {
-				downloadThumbnail(fileDir+"/"+fileHashStr+"s.jpg", board, strconv.Itoa(post.Tim)+"s.jpg")
+				downloadThumbnail(fileDir+"/"+attachmentMd5Hash+"s.jpg", board, strconv.Itoa(post.Tim)+"s.jpg")
 				err := os.WriteFile(filePath, attachment, 0644)
 				if err != nil {
 					debug.Fatal(err)
@@ -320,7 +331,7 @@ func main() {
 				post.Tn_w,
 				post.Tn_h,
 				post.Filedeleted,
-				videoHashStr,
+				hex.EncodeToString(attachmentSha1Hash),
 			)
 			if err != nil {
 				debug.Fatal(err)
